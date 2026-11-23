@@ -549,7 +549,7 @@ public class BankingGUI extends JFrame {
         formScroll.setPreferredSize(new Dimension(0, 260));
         panel.add(formScroll, BorderLayout.NORTH);
 
-        accountTableModel = new DefaultTableModel(new String[]{"Account ID", "User ID", "Branch ID", "Balance"}, 0);
+        accountTableModel = new DefaultTableModel(new String[]{"Account ID", "User ID", "Branch ID","Account Type", "Balance"}, 0);
         accountTable = new JTable(accountTableModel);
         panel.add(new JScrollPane(accountTable), BorderLayout.CENTER);
 
@@ -626,6 +626,7 @@ public class BankingGUI extends JFrame {
                         account.getAccountID(),
                         account.getUserID(),
                         account.getBranchID(),
+                        resolveAccountType(account),
                         account.getBalance()
                 });
             } else {
@@ -634,6 +635,18 @@ public class BankingGUI extends JFrame {
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Database Error: " + ex.getMessage());
         }
+    }
+
+    private String resolveAccountType(Account account) {
+        String accountType;
+        if (account instanceof InvestmentAccount) {
+            accountType = "Investment";
+        } else if (account instanceof ChequeAccount) {
+            accountType = "Cheque";
+        } else {
+            accountType = "Standard";
+        }
+        return accountType;
     }
 
     private void loadAllAccounts() {
@@ -645,12 +658,38 @@ public class BankingGUI extends JFrame {
                         account.getAccountID(),
                         account.getUserID(),
                         account.getBranchID(),
+                        resolveAccountType(account),
                         account.getBalance()
                 });
             }
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Database Error: " + ex.getMessage());
         }
+    }
+
+    private Account buildAccountFromInputs() {
+        String accId = txtAccountId.getText().trim();
+        String userId = txtAccUserId.getText().trim();
+        String branchId = txtBranchId.getText().trim();
+        float balance = Float.parseFloat(txtBalance.getText().trim());
+
+        String initialDepositText = txtInitialDeposit.getText().trim();
+        String employerName = txtEmployerName.getText().trim();
+        String employerAddress = txtEmployerAddress.getText().trim();
+
+        if (!initialDepositText.isEmpty()) {
+            int initialDeposit = Integer.parseInt(initialDepositText);
+            return new InvestmentAccount(accId, userId, branchId, balance, initialDeposit);
+        }
+
+        if (!employerName.isEmpty() || !employerAddress.isEmpty()) {
+            ChequeAccount chequeAccount = new ChequeAccount(accId, userId, branchId, balance);
+            chequeAccount.setEmployerName(employerName);
+            chequeAccount.setEmployerAddress(employerAddress);
+            return chequeAccount;
+        }
+
+        return new Account(accId, userId, branchId, balance);
     }
 
     private void clearAccountFields() {

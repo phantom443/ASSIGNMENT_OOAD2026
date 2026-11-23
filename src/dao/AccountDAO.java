@@ -133,5 +133,32 @@ public class AccountDAO {
             pstmt.executeUpdate();
         }
     }
+
+    private Account mapResultSetToAccount(ResultSet rs) throws SQLException {
+        String accountId = rs.getString("accountID");
+        String userId = rs.getString("userID");
+        String branchId = rs.getString("branchID");
+        float balance = rs.getFloat("balance");
+
+        int initialDeposit = rs.getInt("initialDeposit");
+        boolean hasInitialDeposit = !rs.wasNull() && initialDeposit > 0;
+
+        String employerName = rs.getString("employerName");
+        String employerAddress = rs.getString("employerAddress");
+        boolean hasEmployerInfo = (employerName != null && !employerName.isBlank())
+                || (employerAddress != null && !employerAddress.isBlank());
+
+        if (hasInitialDeposit) {
+            return new InvestmentAccount(accountId, userId, branchId, balance, initialDeposit);
+        }
+        if (hasEmployerInfo) {
+            ChequeAccount cheque = new ChequeAccount(accountId, userId, branchId, balance);
+            cheque.setEmployerName(employerName);
+            cheque.setEmployerAddress(employerAddress);
+            return cheque;
+        }
+        return new Account(accountId, userId, branchId, balance);
+    }
+
 }
 

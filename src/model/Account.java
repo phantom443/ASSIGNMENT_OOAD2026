@@ -1,11 +1,11 @@
 package model;
 
-public class Account implements InterestBearing
-{
+public class Account implements InterestBearing {
     private String accountID;
     private String userID;
     private String branchID;
     private float balance;
+    private float interestRate;
 
     public Account() {
     }
@@ -49,6 +49,27 @@ public class Account implements InterestBearing
         this.accountID = accountID;
     }
 
+    public float getInterestRate() {
+        return interestRate;
+    }
+
+    public void setInterestRate(float interestRate) {
+        this.interestRate = interestRate;
+    }
+
+    @Override
+    public float calculateInterest() {
+        return balance * (interestRate / 12.0f);
+    }
+
+    @Override
+    public void payInterest() {
+        float monthlyInterest = calculateInterest();
+        if (monthlyInterest > 0) {
+            this.balance += monthlyInterest;
+        }
+    }
+
     @Override
     public String toString() {
         return "Account{" +
@@ -56,16 +77,7 @@ public class Account implements InterestBearing
                 ", customerID='" + userID + '\'' +
                 ", branchID='" + branchID + '\'' +
                 ", balance=" + balance +
+                ", interestRate=" + interestRate +
                 '}';
-    }
-
-    @Override
-    public void calculateInterest() {
-
-    }
-
-    @Override
-    public void payInterest() {
-
     }
 }

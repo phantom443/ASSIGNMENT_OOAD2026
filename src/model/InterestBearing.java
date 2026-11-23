@@ -1,7 +1,6 @@
 package model;
 
-public interface InterestBearing
-{
-    void calculateInterest();
+public interface InterestBearing {
+    float calculateInterest();
     void payInterest();
 }
