@@ -1,6 +1,7 @@
 package view;
 
 import controller.*;
+import dao.BankTellerDAO;
 import model.*;
 
 import javax.swing.*;
@@ -21,6 +22,7 @@ public class BankingGUI extends JFrame {
     private AccountController accountController;
     private BranchController branchController;
     private TransactionController transactionController;
+    private BankTellerDAO bankTellerDAO;
 
     private CardLayout cardLayout;
     private JPanel mainContainer;
@@ -30,7 +32,7 @@ public class BankingGUI extends JFrame {
     private JButton btnSubmitUserForm;
     private JTable userTable;
     private DefaultTableModel userTableModel;
-    private String currentUserMode = "ADD"; // ADD, UPDATE, DELETE
+    private String currentUserMode = "ADD";
 
     private JTextField txtAccountId, txtAccUserId, txtBranchId, txtBalance;
     private JTextField txtEmployerName, txtEmployerAddress, txtInitialDeposit;
@@ -38,7 +40,7 @@ public class BankingGUI extends JFrame {
     private JButton btnSubmitAccountForm;
     private JTable accountTable;
     private DefaultTableModel accountTableModel;
-    private String currentAccountMode = "ADD"; // ADD, DELETE
+    private String currentAccountMode = "ADD";
 
     private JTextField txtBrId, txtBrName, txtBrLocation;
     private JTextField txtTxAccId;
@@ -53,6 +55,7 @@ public class BankingGUI extends JFrame {
         accountController = new AccountController();
         branchController = new BranchController();
         transactionController = new TransactionController();
+        bankTellerDAO = new BankTellerDAO();
 
         setTitle("Banking Management System");
         setSize(950, 650);
@@ -229,7 +232,7 @@ public class BankingGUI extends JFrame {
     private JPanel createUserPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 8));
 
-        JPanel formPanel = new JPanel(new GridLayout(7, 2, 5, 5));
+        JPanel formPanel = new JPanel(new GridLayout(8, 2, 5, 5));
         formPanel.setBorder(BorderFactory.createTitledBorder("User Details"));
 
         formPanel.add(new JLabel("User ID:"));
@@ -269,9 +272,19 @@ public class BankingGUI extends JFrame {
 
         formPanel.add(new JLabel(""));
         formPanel.add(btnPanel);
+
+        formPanel.add(new JLabel("Bank Teller:"));
+        JPanel tellerBtnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        JButton btnAddTeller = new JButton("Add Teller");
+        btnAddTeller.addActionListener(e -> addBankTeller());
+        tellerBtnPanel.add(btnAddTeller);
+        formPanel.add(tellerBtnPanel);
+
         panel.add(formPanel, BorderLayout.NORTH);
 
-        userTableModel = new DefaultTableModel(new String[]{"User ID", "Name", "Surname", "Address", "Contact"}, 0);
+        userTableModel = new DefaultTableModel(
+                new String[]{"User ID", "Name", "Surname", "Address", "Contact", "Role"}, 0
+        );
         userTable = new JTable(userTableModel);
         panel.add(new JScrollPane(userTable), BorderLayout.CENTER);
 
@@ -283,29 +296,30 @@ public class BankingGUI extends JFrame {
                     if (success) {
                         JOptionPane.showMessageDialog(this, "User deleted successfully!");
                         loadAllUsers();
+                        clearUserFields();
                     } else {
                         JOptionPane.showMessageDialog(this, "Failed to delete user.");
                     }
                     return;
                 }
 
-                User user = new User(
-                        userId,
-                        txtName.getText().trim(),
-                        txtSurname.getText().trim(),
-                        txtAddress.getText().trim(),
-                        Integer.parseInt(txtContact.getText().replaceAll("[^0-9]", "")),
-                        new String(txtPassword.getPassword())
-                );
-
                 if ("UPDATE".equals(currentUserMode)) {
+                    User user = new User(
+                            userId,
+                            txtName.getText().trim(),
+                            txtSurname.getText().trim(),
+                            txtAddress.getText().trim(),
+                            Integer.parseInt(txtContact.getText().replaceAll("[^0-9]", "")),
+                            new String(txtPassword.getPassword())
+                    );
                     userController.updateUser(user);
                     JOptionPane.showMessageDialog(this, "User updated successfully!");
-                } else {
-                    userController.addUser(user);
-                    JOptionPane.showMessageDialog(this, "User added successfully!");
+                    loadAllUsers();
+                    clearUserFields();
+                    return;
                 }
-                loadAllUsers();
+
+                addUser();
             } catch (SQLException | NumberFormatException ex) {
                 JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage());
             }
@@ -316,6 +330,93 @@ public class BankingGUI extends JFrame {
         btnRefreshUser.addActionListener(e -> clearUserFields());
 
         return panel;
+    }
+
+    private void addUser() {
+        try {
+            String userId = txtUserId.getText().trim();
+            String name = txtName.getText().trim();
+            String surname = txtSurname.getText().trim();
+            String address = txtAddress.getText().trim();
+            String contactDigits = txtContact.getText().replaceAll("[^0-9]", "");
+            String password = new String(txtPassword.getPassword());
+
+            if (userId.isEmpty() || name.isEmpty() || surname.isEmpty() || contactDigits.isEmpty()) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Please fill in User ID, Name, Surname, and Contact.",
+                        "Validation Error",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+
+            int contact = Integer.parseInt(contactDigits);
+            User user = new User(userId, name, surname, address, contact, password);
+
+            userController.addUser(user);
+            loadAllUsers();
+            clearUserFields();
+
+            JOptionPane.showMessageDialog(this, "User added successfully!");
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Please enter a valid numeric contact number.",
+                    "Input Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Database Error: " + ex.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            ex.printStackTrace();
+        }
+    }
+
+    private void addBankTeller() {
+        try {
+            String tellerId = txtUserId.getText().trim();
+            String name = txtName.getText().trim();
+            String surname = txtSurname.getText().trim();
+            String address = txtAddress.getText().trim();
+            String contactDigits = txtContact.getText().replaceAll("[^0-9]", "");
+            String password = new String(txtPassword.getPassword());
+
+            if (tellerId.isEmpty() || name.isEmpty() || surname.isEmpty() || contactDigits.isEmpty()) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Please fill in Teller ID, Name, Surname, and Contact.",
+                        "Validation Error",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+
+            int contact = Integer.parseInt(contactDigits);
+            BankTeller teller = new BankTeller(tellerId, name, surname, address, contact, password);
+
+            bankTellerDAO.addTeller(teller);
+
+            userTableModel.addRow(new Object[]{
+                    teller.getTellerID(),
+                    teller.getName(),
+                    teller.getSurname(),
+                    teller.getAddress(),
+                    teller.getContact(),
+                    "Bank Teller"
+            });
+
+            JOptionPane.showMessageDialog(this, "Bank Teller added and displayed in User tab!");
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Database Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Invalid contact number.", "Input Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void searchUserById() {
@@ -345,7 +446,8 @@ public class BankingGUI extends JFrame {
                         user.getName(),
                         user.getSurname(),
                         user.getAddress(),
-                        user.getContact()
+                        user.getContact(),
+                        "User"
                 });
             } else {
                 JOptionPane.showMessageDialog(this, "No user found with ID: " + userId);
@@ -759,4 +861,5 @@ public class BankingGUI extends JFrame {
             e.printStackTrace();
         }
     }
+
 }

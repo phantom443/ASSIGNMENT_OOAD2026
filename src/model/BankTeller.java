@@ -5,6 +5,7 @@ public class BankTeller extends User {
     private String tellerID;
 
     public BankTeller(String tellerID, String name, String surname, String address, int contact, String password) {
+        super(tellerID, name, surname, address, contact, password);
         this.tellerID = tellerID;
     }
 

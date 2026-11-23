@@ -21,6 +21,7 @@ public class BankTellerDAO
             pstmt.executeUpdate();
         }
     }
+
     public BankTeller authenticate(String tellerID, String password) throws SQLException {
         String sql = "SELECT * FROM bankTeller WHERE tellerID = ? AND password = ?";
         BankTeller teller = null;

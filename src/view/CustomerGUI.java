@@ -2,6 +2,7 @@ package view;
 
 import controller.*;
 import model.*;
+import dao.*;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
@@ -111,6 +112,51 @@ public class CustomerGUI extends JFrame {
         return "TX-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
+    private void makeOwnTransaction(String accId, String txType, float amount) {
+        try {
+            if (accId == null || accId.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Please enter Account ID.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            if (amount <= 0) {
+                JOptionPane.showMessageDialog(this, "Amount must be greater than zero.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            String cleanAccId = accId.trim();
+            Account account = accountController.getAccountID(cleanAccId);
+            if (account == null) {
+                JOptionPane.showMessageDialog(this, "Account not found: " + cleanAccId, "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            if (account.getUserID() == null || !account.getUserID().equals(customer.getUserID())) {
+                JOptionPane.showMessageDialog(this, "You are not authorized to transact on account: " + cleanAccId, "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            double delta = "Deposit".equalsIgnoreCase(txType) ? amount : -amount;
+            boolean updated = accountController.updateBalance(cleanAccId, delta);
+            if (!updated) {
+                JOptionPane.showMessageDialog(this, "Insufficient funds or unable to update balance.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            String txId = generateTransactionId();
+            Transaction transaction = new Transaction(txId, cleanAccId, txType, amount);
+            transactionController.addTransaction(transaction);
+
+            Account refreshedAccount = accountController.getAccountID(cleanAccId);
+            float newBalance = refreshedAccount != null ? refreshedAccount.getBalance() : account.getBalance();
+
+            JOptionPane.showMessageDialog(this, "Transaction " + txId + " recorded! New balance: " + newBalance);
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Please enter a valid numeric amount.", "Input Error", JOptionPane.ERROR_MESSAGE);
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Database Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        }
+    }
+
     private void openTransactionDialog() {
         try {
             List<Account> allAccounts = accountController.searchAccount();
@@ -137,7 +183,13 @@ public class CustomerGUI extends JFrame {
             form.add(new JLabel("Amount:"));
             form.add(txtAmount);
 
-            int result = JOptionPane.showConfirmDialog(this, form, "New Transaction", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+            int result = JOptionPane.showConfirmDialog(
+                    this,
+                    form,
+                    "New Transaction",
+                    JOptionPane.OK_CANCEL_OPTION,
+                    JOptionPane.PLAIN_MESSAGE
+            );
             if (result != JOptionPane.OK_OPTION) {
                 return;
             }
@@ -146,29 +198,7 @@ public class CustomerGUI extends JFrame {
             String txType = (String) cmbTxType.getSelectedItem();
             float amount = Float.parseFloat(txtAmount.getText().trim());
 
-            if (amount <= 0) {
-                JOptionPane.showMessageDialog(this, "Enter a positive amount.", "Invalid Input", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            double delta = "Deposit".equalsIgnoreCase(txType) ? amount : -amount;
-            boolean updated = accountController.updateBalance(accId, delta);
-            if (!updated) {
-                JOptionPane.showMessageDialog(this, "Insufficient funds for withdrawal.", "Transaction Failed", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            String txId = generateTransactionId();
-            transactionController.addTransaction(new Transaction(txId, accId, txType, amount));
-
-            Account updatedAccount = accountController.getAccountID(accId);
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Transaction " + txId + " successful! Current Balance: " + (updatedAccount != null ? updatedAccount.getBalance() : ""),
-                    "Success",
-                    JOptionPane.INFORMATION_MESSAGE
-            );
-
+            makeOwnTransaction(accId, txType, amount);
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this, "Please enter a valid numeric amount.", "Input Error", JOptionPane.ERROR_MESSAGE);
         } catch (SQLException ex) {
