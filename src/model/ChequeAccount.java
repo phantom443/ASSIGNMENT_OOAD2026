@@ -26,7 +26,9 @@ public class ChequeAccount extends Account
     }
 
     @Override
-    public void calculateInterest(){}
+    public float calculateInterest(){
+        return 0;
+    }
 
     @Override
     public void payInterest(){}
